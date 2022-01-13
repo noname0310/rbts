@@ -13,6 +13,13 @@ export { Node }
 export type LessOp<K> = (a: K, b: K) => boolean
 
 
+/** Type for determining equality of instances:
+ * a function to return true if entry `a` is equals to entry `b`.
+ * @typeparam K key type, entries are sorted by key
+ */
+export type EqualOp<K> = (a: K, b: K) => boolean
+
+
 /** A red-black tree written in TypeScript. The entries are stored sorted after
  * the criterium `lessOp` passed tp the constructor or by default by the
  * comparison operator `<` (less). Insertion, deletion and iteration have
@@ -24,6 +31,7 @@ export class Tree<K = string, V = any>implements Map<K, V> {
   /** @internal */ _root: Node<K, V> = Node.nilNode
   /** @internal */ _size: number = 0
   /** @internal */ readonly _less: Less<K, Node<K, V>>
+  /** @internal */ readonly _equal: EqualOp<K>
 
   /** Create a new red-black tree optionally with entries from `source` and
    * the sorting criterium `lessOp`.
@@ -35,8 +43,10 @@ export class Tree<K = string, V = any>implements Map<K, V> {
   constructor(
     source?: IterableIterator<[K, V]>,
     lessOp: LessOp<K> = (a, b) => a < b,
+    equalOp: EqualOp<K> = (a, b) => a === b,
   ) {
     this._less = (a, b) => lessOp(a, b.key)
+    this._equal = equalOp
     if (source)
       for (const entry of source)
         this._insertNode(new Node(entry[0], entry[1]))
@@ -199,7 +209,8 @@ export class Tree<K = string, V = any>implements Map<K, V> {
     key: K,
     node: Node<K, V> = this._root,
   ): Node<K, V> {
-    while (node.ok && key !== node.key)
+    const equalOp = this._equal
+    while (node.ok && !equalOp(key, node.key))
       node = this._less(key, node) ? node._left : node._right
     return node
   }
